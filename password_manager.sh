@@ -6,23 +6,27 @@ while true; do
     read -p  "次の選択肢から入力してください(Add Password/Get Password/Exit)：
 " -r option
     
-
     case $option in
         "Add Password")
             read -p  "サービス名を入力してください：" -r serv_name
             read -p  "ユーザー名を入力してください：" -r user_name
+            # 入力した文字をモニター上では非表示にする
             read -s -p "パスワードを入力してください：" -r password
-
-            #　設定ファイルに"サービス名:ユーザー名:パスワード"という形式で保存
-            echo "$serv_name:$user_name:$password" >> password_setting.md
+            echo;
+            #　設定ファイルに"サービス名:ユーザー名:パスワード"という形式で出力しパイプする。次に暗号化し保存
+            echo "$serv_name:$user_name:$password" | openssl enc -aes-256-cbc -salt -out encrypted_password.enc
             echo;
             echo "パスワードの追加は成功しました。"
             ;;
 
         "Get Password")
             read -p  "サービス名を入力してください：" -r input_serv_name
-                grep_result=$(grep "^$input_serv_name" "password_setting.md")
-            #grepの帰り値が空、つまり検索結果なしの場合
+            # パスワードファイルを復号化した後変数に代入
+            decrypted_password=$(openssl enc -d -aes-256-cbc -in encrypted_password.enc)
+
+            # サービス名で前方一致検索をパスワードファイル内にかける
+            grep_result=$(grep "^$input_serv_name"  <<< "$decrypted_password")
+            # grepの返り値が空、つまり検索結果なしの場合
             if [ -z "$grep_result"  ]; then
                 echo "そのサービスは登録されていません。"
             else
